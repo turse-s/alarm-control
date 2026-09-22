@@ -124,7 +124,14 @@ int main(void)
         }
         
         if (uart1.frameReady == 1) {
-            parse_uart_data(&uart1, &peMsg);
+              uart1.frameReady = 0U;             /* ★先清标志再取队: 期间到达的新帧不丢 */
+              while (uart1.rxTail != uart1.rxHead)
+              {
+                uint8_t  t = uart1.rxTail;
+                sUartMsg m = uart1.rxMsg[t];     /* 拷出快照, 缩短与ISR的共享窗口 */
+                uart1.rxTail = (uint8_t)((t + 1U) % UART_RX_MSG_NUM);
+                (void)parse_uart_data(&m, &peMsg);  /* 校验+执行 */
+              }
         }
 //        
         

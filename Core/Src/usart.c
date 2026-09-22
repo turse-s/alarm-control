@@ -76,19 +76,32 @@ void DMA1_Channel2_3_IRQHandler(void)
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    uint16_t copy_len = 0;
-    if (huart->Instance == USART1)
-    {
-        copy_len = (Size > UART_RX_BUF_SIZE) ? UART_RX_BUF_SIZE : Size;
-        // 将DMA接收缓冲区中的数据存入环形缓冲区
-        for (uint16_t i = 0; i < copy_len; i++) {
-            uart1.rxBuf[i] = uart1.ringBuf[i];
+    if (huart->Instance == USART1) {
+        uint16_t frames = Size / UART_RX_MSG_SIZE;
+
+        for (uint16_t f = 0; f < frames; f++) {
+            uint8_t next = (uint8_t)((uart1.rxHead + 1U) % UART_RX_MSG_NUM);
+            if (next == uart1.rxTail) {               /* 队列满: 丢新保旧 */
+                uart1.rxOvf++;
+                continue;
+            }
+            memcpy(uart1.rxMsg[uart1.rxHead].data,
+                 &uart1.ringBuf[f * UART_RX_MSG_SIZE],
+                 UART_RX_MSG_SIZE);
+            uart1.rxMsg[uart1.rxHead].len = UART_RX_MSG_SIZE;
+            uart1.rxHead = next;                 /* ★最后发布写指针 */
         }
-        uart1.rxCnt = copy_len;
+
+        if ((Size % UART_RX_MSG_SIZE) != 0U) {
+          uart1.rxErr++;                       /* 半帧/噪声尾巴, 丢弃并计数 */
+        }
+
         uart1.frameReady = 1;
-        // 重新启动 DMA 接收，等待下一帧
+
+        /* 重启DMA接收, 并关闭半传输中断(避免每个事件触发两次回调) */
         HAL_UARTEx_ReceiveToIdle_DMA(huart, uart1.ringBuf, UART_RX_BUF_SIZE);
-    }
+        __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+  }
 }
 
 void uart_Send(uint16_t cmd, unsigned char data1, unsigned char date2)
@@ -100,7 +113,7 @@ void uart_Send(uint16_t cmd, unsigned char data1, unsigned char date2)
     uart1.txBuf[2] = cmd;
     uart1.txBuf[3] = data1;
     uart1.txBuf[4] = date2;
-    uart1.txBuf[5] = uart1.txBuf[1] + uart1.txBuf[2] + uart1.txBuf[3] + uart1.txBuf[4];
+    uart1.txBuf[5] = uart1.txBuf[0] + uart1.txBuf[1] + uart1.txBuf[2] + uart1.txBuf[3] + uart1.txBuf[4];
     
     HAL_UART_Transmit_DMA(&huart1, uart1.txBuf, 6);
 }

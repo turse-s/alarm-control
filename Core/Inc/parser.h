@@ -24,6 +24,7 @@ extern "C" {
 
 #define SET_ALARM_CONFIG                        0x71
 #define ALARM_INPUT                             0x72
+#define BOOT_HEADER                             0x99
 typedef struct
 {
     unsigned char header;
@@ -44,7 +45,7 @@ typedef struct
 
 extern sCommRqMsg peMsg;
 
-int parse_uart_data(sUart *bus, sCommRqMsg *rqMsg);
+int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg);
 
 void Jump_To_Bootloader(void);
 

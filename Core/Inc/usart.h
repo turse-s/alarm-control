@@ -27,21 +27,32 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-#define UART_RX_BUF_SIZE        8
+#define UART_RX_BUF_SIZE        54
+#define UART_RX_MSG_SIZE        7
+#define UART_RX_MSG_NUM         8
 #define UART_TX_BUF_SIZE        8
 
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
-typedef struct
-{;
-    unsigned char frameReady; 
-    unsigned char txBuf[UART_TX_BUF_SIZE + 1];
-    unsigned short rxCnt;
-    unsigned char rxBuf[UART_RX_BUF_SIZE + 1];
+typedef struct {
+    uint8_t data[UART_RX_MSG_SIZE];
+    uint8_t len;
+} sUartMsg;
 
-    unsigned char ringBuf[UART_RX_BUF_SIZE +1];
+typedef struct {
+    /* RX: DMA直达缓冲 */
+    uint8_t          ringBuf[UART_RX_BUF_SIZE];
+    /* RX: 帧环形队列 */
+    sUartMsg         rxMsg[UART_RX_MSG_NUM];
+    volatile uint8_t rxHead;      /* 仅ISR写 */
+    volatile uint8_t rxTail;      /* 仅主循环写 */
+    volatile uint8_t frameReady;  /* 队列非空提示 */
+    uint16_t         rxOvf;       /* 队列满丢弃计数 */
+    uint16_t         rxErr;       /* 半帧/噪声计数 */
+    /* TX */
+    uint8_t          txBuf[UART_TX_BUF_SIZE];
 } sUart;
 
 extern UART_HandleTypeDef huart1;

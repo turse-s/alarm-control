@@ -7,16 +7,20 @@ static void (*boot_entry)(void);
 
 sCommRqMsg peMsg;
 
-int parse_uart_data(sUart *bus, sCommRqMsg *rqMsg)
+int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
 {
     int err = 0;
     unsigned long checksum = 0;
     uint8_t levelA = 0, levelB = 0;
     
-    memset(rqMsg->rqData, 0, sizeof(rqMsg->rqData));
-    memmove(rqMsg->rqData, bus->rxBuf, bus->rxCnt);
+    if ((msg == NULL) || (rqMsg == NULL)) {
+    return PARSE_ERR_HEAD;
+    }
     
-    rqMsg->length = bus->rxCnt;
+    memset(rqMsg->rqData, 0, sizeof(rqMsg->rqData));
+    memmove(rqMsg->rqData, msg->data, PELCO_LENGTH);
+    
+    rqMsg->length = PELCO_LENGTH;
     rqMsg->index = 0;
     rqMsg->header = rqMsg->rqData[rqMsg->index++];
     rqMsg->index++;
@@ -26,7 +30,7 @@ int parse_uart_data(sUart *bus, sCommRqMsg *rqMsg)
     rqMsg->data2 = rqMsg->rqData[rqMsg->index++];
     rqMsg->checksum = rqMsg->rqData[rqMsg->index++];
     
-   if (rqMsg->header == 0x99) {
+    if (rqMsg->header == 0x99) {
         Jump_To_Bootloader();
     }
     
