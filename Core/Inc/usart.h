@@ -28,7 +28,7 @@ extern "C" {
 #include "main.h"
 
 #define UART_RX_BUF_SIZE        54
-#define UART_RX_MSG_SIZE        7
+#define UART_RX_MSG_SIZE        6
 #define UART_RX_MSG_NUM         8
 #define UART_TX_BUF_SIZE        8
 

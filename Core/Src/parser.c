@@ -24,15 +24,15 @@ int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
     rqMsg->index = 0;
     rqMsg->header = rqMsg->rqData[rqMsg->index++];
     rqMsg->index++;
-    rqMsg->cmd = (rqMsg->rqData[rqMsg->index]<<8) | rqMsg->rqData[rqMsg->index+1];
-    rqMsg->index += 2;
+    rqMsg->cmd = rqMsg->rqData[rqMsg->index];
+    rqMsg->index += 1;
     rqMsg->data1 = rqMsg->rqData[rqMsg->index++];
     rqMsg->data2 = rqMsg->rqData[rqMsg->index++];
     rqMsg->checksum = rqMsg->rqData[rqMsg->index++];
-    
-    if (rqMsg->header == 0x99) {
-        Jump_To_Bootloader();
-    }
+//    
+//    if (rqMsg->header == 0x99) {
+//        Jump_To_Bootloader();
+//    }
     
     if (rqMsg->length < PELCO_LENGTH) {
         return PARSE_ERR_LEN;
@@ -43,7 +43,7 @@ int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
         return PARSE_ERR_HEAD;
     }
     
-    for(int i = 1; i < PELCO_LENGTH - 1; i++) {
+    for(int i = 0; i < PELCO_LENGTH - 1; i++) {
         checksum += rqMsg->rqData[i];
 
     }
@@ -55,19 +55,19 @@ int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
     switch(rqMsg->cmd) {
         case SET_ALARM_CONFIG:
             FlashStorage_Write(rqMsg->data1, rqMsg->data2);
-            levelA = (rqMsg->data1 >> 4) & 0x01u;
-            levelB = rqMsg->data1 & 0x01u;
+            levelB = (rqMsg->data1 >> 4) & 0x01u;
+            levelA = rqMsg->data1 & 0x01u;
             ENA.sta = levelA ? GPIO_HIGH : GPIO_LOW;
-            ENB.sta = levelA ? GPIO_HIGH : GPIO_LOW;
+            ENB.sta = levelB ? GPIO_HIGH : GPIO_LOW;
 
-            ENA.status = (rqMsg->data2 >> 4) & 0x01u;
-            ENB.status = rqMsg->data2 & 0x01u;
+            ENB.status = (rqMsg->data2 >> 4) & 0x01u;
+            ENA.status = rqMsg->data2 & 0x01u;
             break;
         case ALARM_INPUT:
             levelA = rqMsg->data1;
             levelB = rqMsg->data2;
-            ENA.sta = levelA ? GPIO_HIGH : GPIO_LOW;
-            ENB.sta = levelB ? GPIO_HIGH : GPIO_LOW;
+						 ENA.sta = levelA ? GPIO_LOW : GPIO_HIGH;
+						 ENB.sta = levelB ? GPIO_LOW : GPIO_HIGH;
             gpioWrite(&ENA);
             gpioWrite(&ENB);
             break;
