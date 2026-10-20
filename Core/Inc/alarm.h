@@ -33,12 +33,13 @@ extern "C" {
 typedef struct
 {
     sGpio             gpio;
-    GPIO_PinState     lastSample;   /* 上次采样电平 */
-    GPIO_PinState     stableLevel;  /* 已确认的稳定电平 */
+    eGpioSta     lastSample;   /* 上次采样电平 */
+    eGpioSta     stableLevel;  /* 已确认的稳定电平 */
     uint32_t          changeTick;   /* 电平变化时刻 */
     unsigned char     state;        /* 去抖状态机 */
     unsigned char     alarm;        /* 报警状态 */
     unsigned char     deaultLevel;
+    unsigned char     enable;       //是否使能
 } AlarmDev_t;
 
 
@@ -48,6 +49,6 @@ extern AlarmDev_t alarm_B;
 
 
 void Alarm_Scan(AlarmDev_t *dev);
-void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLevel);
+void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLevel, uint8_t enable);
 
 #endif

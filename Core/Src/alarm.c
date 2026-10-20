@@ -26,14 +26,15 @@ AlarmDev_t alarm_B;
   * @param  pin:  GPIO 引脚，如 GPIO_PIN_0
   * @retval None
   */
-void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLevel)
+void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLevel, uint8_t enable)
 {
     /* 初始化 GPIO 端口和引脚 */
     dev->gpio.port = port;
     dev->gpio.pin  = pin;
 
     /* 以上电初始电平为基准 */
-    dev->lastSample  = defaultLevel ? GPIO_PIN_SET : GPIO_PIN_RESET;;
+    dev->enable = enable;
+    dev->lastSample  = defaultLevel ? GPIO_HIGH : GPIO_LOW;
     dev->deaultLevel = dev->lastSample;
     dev->stableLevel = dev->lastSample;
     dev->changeTick  = HAL_GetTick();
@@ -53,42 +54,38 @@ void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLe
   */
 void Alarm_Scan(AlarmDev_t *dev)
 {
-    GPIO_PinState now     = gpioRead(&dev->gpio);
+    eGpioSta now     = gpioRead(&dev->gpio);
     uint32_t      nowTick = HAL_GetTick();
 
     switch (dev->state)
     {
         /* ---- 稳定态：检测电平是否跳变 ---- */
         case DEBOUNCE_STABLE:
-            if (now != dev->stableLevel) {
+            if (now != dev->deaultLevel) {
                 /* 电平跳变，开始去抖计时 */
                 dev->lastSample = now;
                 dev->changeTick = nowTick;
                 dev->state      = DEBOUNCE_WAITING;
-            } else {
-                /* Nothing to do */
             }
             break;
 
         /* ---- 等待态：判断抖动 / 确认有效 ---- */
         case DEBOUNCE_WAITING:
-            dev->lastSample = now;
             if (now != dev->lastSample) {
                 /* 电平再次变化，视为抖动，重新计时 */
+                dev->lastSample = now;
                 dev->changeTick = nowTick;
+                dev->state      = DEBOUNCE_STABLE;
             } else if ((nowTick - dev->changeTick) >= ALARM_DEBOUNCE_MS) {
                 /* 电平稳定超时，确认本次电平变化有效 */
-                GPIO_PinState oldLevel = dev->stableLevel;
-                dev->stableLevel = now;
+                eGpioSta oldLevel = dev->stableLevel;
+                dev->deaultLevel = now;
                 dev->state       = DEBOUNCE_STABLE;
                 if (now != oldLevel) {
-                    if (now == GPIO_PIN_RESET) {
-                        /* 低电平 = 报警触发（高触发动机请对调分支）*/
-                        dev->alarm = ALARM_ACTIVE;
-                    } else {
-                        /* 高电平 = 报警解除 */
-                        dev->alarm = ALARM_IDLE;
-                    }
+                    dev->alarm = ALARM_ACTIVE;
+
+                } else {
+                     dev->alarm = ALARM_IDLE;
                 }
             }
             break;

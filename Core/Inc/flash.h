@@ -11,10 +11,14 @@
 /* F042F6P6: 32KB Flash, 1KB/页, 最后一页首地址 */
 #define FLASH_CFG_PAGE_ADDR   ((uint32_t)0x08007C00)
 #define FLASH_CFG_ADDR_MAGIC  ((uint32_t)0x08007C00)  /* 魔法字 */
-#define FLASH_CFG_ADDR_DATA   ((uint32_t)0x08007C02)  /* 高4位=A路电平, 低4位=B路电平 */
+#define FLASH_CFG_ADDR_ALARM   ((uint32_t)0x08007C02)  /* 高4位=A路电平, 低4位=B路电平 */
+#define FLASH_CFG_ADDR_ENABLE  ((uint32_t)0x08007C04)  /* 高4位=A路电平, 低4位=B路电平 */
+#define FLASH_IAP_SATE_PAGE   ((uint32_t)0x08003C00)  /* 0x08003FF0 所在页首地址 */
+#define FLASH_IAP_SATE_ADDR   ((uint32_t)0x08003FF0)
 
-uint8_t FlashStorage_Read (uint8_t *levelA, uint8_t *levelB);
-uint8_t FlashStorage_Write(uint8_t levelA, uint8_t levelB);
+uint8_t FlashStorage_Read(uint8_t *type_A, uint8_t *type_B, uint8_t *enable_A, uint8_t *enable_B);
+uint8_t FlashStorage_Write(uint8_t type_A, uint8_t type_B, uint8_t enable_A, uint8_t enable_B);
+uint8_t IAP_SetState(uint16_t state);
 
 #endif
 

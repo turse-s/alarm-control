@@ -65,7 +65,7 @@ extern DMA_HandleTypeDef hdma_usart1_tx;
 /* USER CODE END Private defines */
 
 void MX_USART1_UART_Init(void);
-void uart_Send(uint16_t cmd, unsigned char data1, unsigned char date2);
+void uart_Send(uint16_t cmd, unsigned char data1);
 
 /* USER CODE BEGIN Prototypes */
 

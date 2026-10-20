@@ -20,8 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "led.h"
 
-sLed Led1;
-sLed Led2;
+sLed Led;
 
 /* USER CODE BEGIN 0 */
 
@@ -53,8 +52,7 @@ void LED_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+
 
   /*Configure GPIO pin : PA7 */
   GPIO_InitStruct.Pin = GPIO_PIN_7;
@@ -63,30 +61,14 @@ void LED_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-  
-    Led1.num = 0;
-    Led1.cycleTime = 10;
-    Led1.offTime = 30;
-    Led1.enLev = 0;
-    Led1.sta = LED_STA_FLASH;
-    Led1.gpio.port = GPIO_A;
-    Led1.gpio.pin = (eGpioPin)GPIO_PIN_7;
-    Led1.gpio.sta = GPIO_LOW;
-  
-    Led2.num = 0;
-    Led2.cycleTime = 10;
-    Led2.offTime = 30;
-    Led2.enLev = 0;
-    Led2.sta = LED_STA_FLASH;
-    Led2.gpio.port = GPIO_B;
-    Led2.gpio.pin = (eGpioPin)GPIO_PIN_1;
-    Led2.gpio.sta = GPIO_LOW;
+    Led.num = 0;
+    Led.cycleTime = 10;
+    Led.offTime = 30;
+    Led.enLev = 0;
+    Led.sta = LED_STA_OFF;
+    Led.gpio.port = GPIO_A;
+    Led.gpio.pin = (eGpioPin)GPIO_PIN_7;
+    Led.gpio.sta = GPIO_LOW;
 
 }
 

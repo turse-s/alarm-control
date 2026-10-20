@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "gpio.h"
+#include "alarm.h"
 
 sGpio ENA;
 sGpio ENB;
@@ -89,6 +90,7 @@ int alarmStaGpioInit(void)
     ENB.port = GPIO_A;
     ENB.pin = GPIO_PIN_6;
     ENB.sta = GPIO_LOW;
+    
 /*---------------------------------- end add ---------------------------------*/
     return 0;
 }
@@ -104,7 +106,7 @@ int gpioRead(sGpio *gpio)
 {
     gpio->sta = (eGpioSta)HAL_GPIO_ReadPin((GPIO_TypeDef*)gpio->port, gpio->pin);
 
-    return 0;
+    return gpio->sta;
 }
 
 /******************************************************************************

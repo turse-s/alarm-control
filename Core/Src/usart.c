@@ -104,7 +104,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
   }
 }
 
-void uart_Send(uint16_t cmd, unsigned char data1, unsigned char date2)
+void uart_Send(uint16_t cmd, unsigned char data1)
 {
     int sendData;
     
@@ -112,7 +112,7 @@ void uart_Send(uint16_t cmd, unsigned char data1, unsigned char date2)
     uart1.txBuf[1] = 0x01;
     uart1.txBuf[2] = cmd;
     uart1.txBuf[3] = data1;
-    uart1.txBuf[4] = date2;
+    uart1.txBuf[4] = 0x00;
     uart1.txBuf[5] = uart1.txBuf[0] + uart1.txBuf[1] + uart1.txBuf[2] + uart1.txBuf[3] + uart1.txBuf[4];
     
     HAL_UART_Transmit_DMA(&huart1, uart1.txBuf, 6);

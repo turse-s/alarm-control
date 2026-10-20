@@ -23,7 +23,9 @@
 #include "parser.h"
 #include "alarm.h"
 #include "flash.h"
+#include "led.h"
 
+IWDG_HandleTypeDef hiwdg;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -66,6 +68,13 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+    uint16_t iap_state;
+    HAL_IWDG_Refresh(&hiwdg);
+     iap_state    = *(__IO uint16_t *)FLASH_IAP_SATE_ADDR;
+    
+    if (iap_state == 0x03) {
+        IAP_SetState(0x04);
+    }
     __enable_irq();
   /* USER CODE BEGIN 1 */
 
@@ -77,6 +86,8 @@ int main(void)
 
     HAL_Init();
 
+    HAL_IWDG_Refresh(&hiwdg);
+    
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -91,38 +102,48 @@ int main(void)
   /* Initialize all configured peripherals */
     MX_USART1_UART_Init();
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uart1.ringBuf, UART_RX_BUF_SIZE);
+    LED_GPIO_Init();
     
-    uint8_t levelA = 0, levelB = 0;
-    (void)FlashStorage_Read(&levelA, &levelB);
+    
+//    uart_Send(0x00,0x00);
+    uint8_t alarmA_type = 0, alarmB_type = 0;
+    uint8_t alarmA_enable = 0, alarmB_enable = 0;
+    (void)FlashStorage_Read(&alarmA_type, &alarmB_type, &alarmA_enable, &alarmB_enable);
     
     alarmStaGpioInit();
-    
-    Alarm_Init(&alarm_A, GPIO_A, GPIO_PIN_1, levelA);
-    Alarm_Init(&alarm_B, GPIO_A, GPIO_PIN_0, levelB);
+    HAL_IWDG_Refresh(&hiwdg);
+    Alarm_Init(&alarm_A, GPIO_A, GPIO_PIN_1, alarmA_type, alarmA_enable);
+    Alarm_Init(&alarm_B, GPIO_A, GPIO_PIN_0, alarmB_type, alarmB_enable);
 
   /* USER CODE BEGIN 2 */
     
-    unsigned int per_myriad;
     uint16_t date1 = 0, date2 = 0;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1)
     {
-        
-//        uart_Send(0x71,date1,date2);
-        if (ENA.status) {
+        HAL_IWDG_Refresh(&hiwdg);
+        if (!alarm_A.enable) {
             Alarm_Scan(&alarm_A);
         }
-        if (ENB.status) {
+        if (!alarm_B.enable) {
             Alarm_Scan(&alarm_B);
         }
         
-        if (alarm_A.alarm || alarm_B.alarm) {
-            date1 = (alarm_A.deaultLevel << 4) | alarm_B.deaultLevel;
-            date2 = (alarm_A.deaultLevel << 4) | alarm_B.deaultLevel;
-            uart_Send(0x07,date1,date2);
+        ENA.sta = alarm_A.alarm ? GPIO_HIGH : GPIO_LOW;
+        ENB.sta = alarm_B.alarm ? GPIO_HIGH : GPIO_LOW;
+        gpioWrite(&ENA);
+        gpioWrite(&ENB);
+        
+        if ((alarm_A.alarm || alarm_B.alarm) && (!alarm_B.enable || !alarm_A.enable)) {
+            date1 = (alarm_B.deaultLevel << 4) | alarm_A.deaultLevel;
+            uart_Send(0x07,date1);
+            Led.sta = LED_STA_ON;
+        } else {
+            Led.sta = LED_STA_OFF;
         }
         
+        ledCtrl(&Led);
         if (uart1.frameReady == 1) {
               uart1.frameReady = 0U;             /* ★先清标志再取队: 期间到达的新帧不丢 */
               while (uart1.rxTail != uart1.rxHead)
@@ -133,9 +154,7 @@ int main(void)
                 (void)parse_uart_data(&m, &peMsg);  /* 校验+执行 */
               }
         }
-//        
-        
-        HAL_Delay(1000);
+        HAL_Delay(100);
       
     /* USER CODE BEGIN 3 */
     }
