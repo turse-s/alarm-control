@@ -31,17 +31,20 @@ void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLe
     /* 初始化 GPIO 端口和引脚 */
     dev->gpio.port = port;
     dev->gpio.pin  = pin;
+    
+    gpioRead(&dev->gpio);
 
     /* 以上电初始电平为基准 */
     dev->enable = enable;
     dev->lastSample  = defaultLevel ? GPIO_HIGH : GPIO_LOW;
-    dev->deaultLevel = dev->lastSample;
+    dev->deaultLevel = defaultLevel ? GPIO_LOW : GPIO_HIGH;;
     dev->stableLevel = dev->lastSample;
     dev->changeTick  = HAL_GetTick();
 
     /* 状态机复位 */
     dev->state = DEBOUNCE_STABLE;
     dev->alarm = ALARM_IDLE;
+    dev->exter_trig = ALARM_IDLE;
 }
 
 /**
@@ -81,11 +84,12 @@ void Alarm_Scan(AlarmDev_t *dev)
                 eGpioSta oldLevel = dev->stableLevel;
                 dev->deaultLevel = now;
                 dev->state       = DEBOUNCE_STABLE;
-                if (now != oldLevel) {
+                if (now == oldLevel) {
                     dev->alarm = ALARM_ACTIVE;
-
+                    dev->exter_trig = ALARM_ACTIVE;
                 } else {
                      dev->alarm = ALARM_IDLE;
+                     dev->exter_trig = ALARM_IDLE;
                 }
             }
             break;

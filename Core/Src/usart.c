@@ -74,6 +74,21 @@ void DMA1_Channel2_3_IRQHandler(void)
     HAL_DMA_IRQHandler(&hdma_usart1_rx);
 }
 
+
+volatile uint16_t g_rx_err = 0;
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1) {
+        if (huart->RxState == HAL_UART_STATE_READY) {
+            g_rx_err++;
+            HAL_UARTEx_ReceiveToIdle_DMA(huart, uart1.ringBuf, UART_RX_BUF_SIZE);
+            __HAL_DMA_DISABLE_IT(huart->hdmarx, DMA_IT_HT);
+        }
+    }
+}
+
+
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
     if (huart->Instance == USART1) {
@@ -144,7 +159,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
       
       /* USART1 interrupt Init */
-    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
         /* USER CODE BEGIN USART1_MspInit 1 */
     __HAL_UART_ENABLE_IT(uartHandle, UART_IT_IDLE);
@@ -177,7 +192,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     // 将 DMA 句柄与 UART 句柄关联
     __HAL_LINKDMA(uartHandle, hdmatx, hdma_usart1_tx);
     
-    HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 
   /* USER CODE END USART2_MspInit 1 */

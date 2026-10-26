@@ -19,7 +19,7 @@ extern "C" {
 #include "gpio.h"
 
 /* Exported constants --------------------------------------------------------*/
-#define ALARM_DEBOUNCE_MS    100u     /* 去抖确认时间 20ms */
+#define ALARM_DEBOUNCE_MS    1000u     /* 去抖确认时间 20ms */
 #define DEBOUNCE_STABLE      0x00    /* 电平稳定 */
 #define DEBOUNCE_WAITING     0x01    /* 电平跳变，等待确认 */
 #define ALARM_IDLE           0x00    /* 无报警 */
@@ -40,6 +40,7 @@ typedef struct
     unsigned char     alarm;        /* 报警状态 */
     unsigned char     deaultLevel;
     unsigned char     enable;       //是否使能
+    unsigned char     exter_trig;
 } AlarmDev_t;
 
 

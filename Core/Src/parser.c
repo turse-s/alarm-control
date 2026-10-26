@@ -65,8 +65,8 @@ int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
         
             FlashStorage_Write(alarmA_type, alarmB_type, alarmA_enable, alarmB_enable);
         
-            alarm_A.deaultLevel = alarmA_type ? GPIO_HIGH : GPIO_LOW;
-            alarm_B.deaultLevel = alarmB_type ? GPIO_HIGH : GPIO_LOW;
+            alarm_A.deaultLevel = alarmA_type ? GPIO_LOW : GPIO_HIGH;
+            alarm_B.deaultLevel = alarmB_type ? GPIO_LOW : GPIO_HIGH;
 
             alarm_A.stableLevel = alarmA_type ? GPIO_HIGH : GPIO_LOW;
             alarm_B.stableLevel = alarmB_type ? GPIO_HIGH : GPIO_LOW;
