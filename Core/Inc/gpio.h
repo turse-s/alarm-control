@@ -82,6 +82,7 @@ typedef struct
 
 extern sGpio ENA;
 extern sGpio ENB;
+extern sGpio Reset;
 
 
 int alarmStaGpioInit(void);

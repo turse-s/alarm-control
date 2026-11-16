@@ -8,7 +8,20 @@ static void (*boot_entry)(void);
 
 sCommRqMsg peMsg;
 
-int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
+
+/**
+  * @brief  串口数据协议解析
+  * @param  dev:            报警设备控制块指针
+  * @param  port:           GPIO 端口，如 GPIOA
+  * @param  pin:            GPIO 引脚，如 GPIO_PIN_0
+  * @param  defaultLevel:   上电默认电平-非报警状态电平
+  * @param  enable:         是否使能报警
+
+  * @retval None
+  */
+  
+  
+int parse_uart_data(const sUartMsg *msg, uint8_t len, sCommRqMsg *rqMsg)
 {
     int err = 0;
     unsigned long checksum = 0;
@@ -21,78 +34,102 @@ int parse_uart_data(const sUartMsg *msg, sCommRqMsg *rqMsg)
     }
     
     memset(rqMsg->rqData, 0, sizeof(rqMsg->rqData));
-    memmove(rqMsg->rqData, msg->data, PELCO_LENGTH);
+    memmove(rqMsg->rqData, msg->data, len);
     
-    rqMsg->length = PELCO_LENGTH;
+    rqMsg->length = len;
     rqMsg->index = 0;
     rqMsg->header = rqMsg->rqData[rqMsg->index++];
     rqMsg->index++;
     rqMsg->cmd = rqMsg->rqData[rqMsg->index++];
     rqMsg->data1 = rqMsg->rqData[rqMsg->index++];
     rqMsg->data2 = rqMsg->rqData[rqMsg->index++];
-    rqMsg->checksum = rqMsg->rqData[rqMsg->index++];
+    rqMsg->checksum = rqMsg->rqData[len - 1];
     
     if (rqMsg->header == 0x99 && rqMsg->rqData[3] == 0xC3) {
-        IAP_SetState(0x01 );
+        IAP_SetState(0x01);
         Jump_To_Bootloader();
     }
     
-    if (rqMsg->length < PELCO_LENGTH) {
+    if (rqMsg->length < 6) {
         return PARSE_ERR_LEN;
     }
     
-    if (rqMsg->header != PELCO_HEADER) {
+    if (rqMsg->header != ALARM_HEADER && rqMsg->header != PELCO_HEADER) {
         uart1.frameReady = 0;
         return PARSE_ERR_HEAD;
     }
-    
-    for(int i = 0; i < PELCO_LENGTH - 1; i++) {
-        checksum += rqMsg->rqData[i];
-
+    if (len == ALARM_LENGTH) {
+        for(int i = 0; i < ALARM_LENGTH - 1; i++) {
+            checksum += rqMsg->rqData[i];
+        }
+    } else {
+        for(int i = 1; i < PELCO_LENGTH - 1; i++) {
+            checksum += rqMsg->rqData[i];
+        }
     }
+    
     
     if (rqMsg->checksum != (checksum & 0xff)) {
         return PARSE_ERR_CHK;
     }
-    
-    switch(rqMsg->cmd) {
-        case SET_ALARM_CONFIG:
-//            FlashStorage_Write(rqMsg->data1, rqMsg->data2);
-            alarmB_type = (rqMsg->data1 >> 4) & 0x01u;
-            alarmA_type = rqMsg->data1 & 0x01u;
-            alarmB_enable = (rqMsg->data2 >> 4) & 0x01u;
-            alarmA_enable = rqMsg->data2 & 0x01u;
-        
-            FlashStorage_Write(alarmA_type, alarmB_type, alarmA_enable, alarmB_enable);
-        
-            alarm_A.deaultLevel = alarmA_type ? GPIO_LOW : GPIO_HIGH;
-            alarm_B.deaultLevel = alarmB_type ? GPIO_LOW : GPIO_HIGH;
-
-            alarm_A.stableLevel = alarmA_type ? GPIO_HIGH : GPIO_LOW;
-            alarm_B.stableLevel = alarmB_type ? GPIO_HIGH : GPIO_LOW;
-        
-            alarm_A.enable = alarmA_enable ? GPIO_HIGH : GPIO_LOW;
-            alarm_B.enable = alarmB_enable ? GPIO_HIGH : GPIO_LOW;
-            alarm_A.alarm = ALARM_IDLE;
-            alarm_B.alarm = ALARM_IDLE;
-
+    switch (rqMsg->header) {
+        case PELCO_HEADER :
+            switch(rqMsg->cmd) {
+                case POWER_CYCLE_REBOOT:
+                    Reset.sta = GPIO_LOW;
+                    gpioWrite(&Reset);
+                    HAL_Delay(3000);
+                    Reset.sta = GPIO_HIGH;
+                    gpioWrite(&Reset);
+                    break;
+                default:
+                    break;
+            }
             break;
-        case ALARM_INPUT:
-            levelA = rqMsg->data1;
-            levelB = rqMsg->data2;
-            alarm_A.alarm = levelA ? GPIO_LOW : GPIO_HIGH;
-            alarm_B.alarm = levelB ? GPIO_LOW : GPIO_HIGH;
-//            gpioWrite(&ENA);
-//            gpioWrite(&ENB);
+        case ALARM_HEADER:
+            switch(rqMsg->cmd) {
+                case SET_ALARM_CONFIG:
+                    alarmB_type = (rqMsg->data1 >> 4) & 0x01u;
+                    alarmA_type = rqMsg->data1 & 0x01u;
+                    alarmB_enable = (rqMsg->data2 >> 4) & 0x01u;
+                    alarmA_enable = rqMsg->data2 & 0x01u;
+                
+                    FlashStorage_Write(alarmA_type, alarmB_type, alarmA_enable, alarmB_enable);
+                
+                    alarm_A.deaultLevel = alarmA_type ? GPIO_LOW : GPIO_HIGH;
+                    alarm_B.deaultLevel = alarmB_type ? GPIO_LOW : GPIO_HIGH;
+
+                    alarm_A.stableLevel = alarmA_type ? GPIO_HIGH : GPIO_LOW;
+                    alarm_B.stableLevel = alarmB_type ? GPIO_HIGH : GPIO_LOW;
+                
+                    alarm_A.enable = alarmA_enable ? GPIO_HIGH : GPIO_LOW;
+                    alarm_B.enable = alarmB_enable ? GPIO_HIGH : GPIO_LOW;
+                    alarm_A.alarm = ALARM_IDLE;
+                    alarm_B.alarm = ALARM_IDLE;
+                    break;
+                case ALARM_INPUT:
+                    levelA = rqMsg->data1;
+                    levelB = rqMsg->data2;
+                    alarm_A.alarm = levelA ? GPIO_LOW : GPIO_HIGH;
+                    alarm_B.alarm = levelB ? GPIO_LOW : GPIO_HIGH;
+                    break;
+                default:
+                    break;
+            }
             break;
         default:
             break;
-        
+    
     }
     
     uart1.frameReady = 0;
+    return 0;
 }
 
+/**
+  * @brief  程序跳转至IAP地址
+  * @retval None
+  */
 void Jump_To_Bootloader(void)
 {
     uint32_t boot_sp;
@@ -118,33 +155,24 @@ void Jump_To_Bootloader(void)
 
     __HAL_RCC_USART1_FORCE_RESET();     /* 硬复位：所有寄存器/标志归零 */
     __HAL_RCC_USART1_RELEASE_RESET();
-//    __HAL_RCC_DMA1_FORCE_RESET();
-//    __HAL_RCC_DMA1_RELEASE_RESET();
+
     HAL_RCC_DeInit();
 
     SysTick->CTRL = 0U;
     SysTick->LOAD = 0U;
     SysTick->VAL  = 0U;
     
-//    for (int i = 0; i < 48U; i++)
-//        *(volatile uint32_t *)(0x20000000U + 4U * i) =
-//        *(volatile uint32_t *)(IAP_BOOT_ADDR + 4U * i);
+
     
     __HAL_RCC_SYSCFG_CLK_ENABLE();
     __HAL_SYSCFG_REMAPMEMORY_FLASH();
         
-//    __HAL_SYSCFG_REMAPMEMORY_SRAM();
-//    SYSCFG->CFGR1 &= ~SYSCFG_CFGR1_MEM_MODE;   /* 00 = Flash 映射到 0x0 */
 
-//    __enable_irq();
-
-//    boot_entry = (void (*)(void))boot_pc;
     __set_MSP(boot_sp);
     __DSB();
     __ISB();
     __enable_irq(); 
     ((void (*)(void))boot_pc)();
 
-//    while (1) { }   /* 不会到达 */
 }
  

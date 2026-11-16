@@ -114,19 +114,18 @@ int main(void)
   /* Initialize all configured peripherals */
     MX_USART1_UART_Init();
     uart_rx_drain();
-    LED_GPIO_Init();
-//    HAL_Delay(5);
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uart1.ringBuf, UART_RX_BUF_SIZE);
-//    LED_GPIO_Init();
+    LED_GPIO_Init();
     
-    
-//    uart_Send(0x00,0x00);
     uint8_t alarmA_type = 0, alarmB_type = 0;
     uint8_t alarmA_enable = 0, alarmB_enable = 0;
     (void)FlashStorage_Read(&alarmA_type, &alarmB_type, &alarmA_enable, &alarmB_enable);
+//    printf("type: 0->Always ON 1->Always OFF\r\n");
+//    printf(" A:type=%u en=%u | B:type=%u en=%u\r\n",
+//           (unsigned)alarmA_type, (unsigned)alarmA_enable,
+//           (unsigned)alarmB_type, (unsigned)alarmB_enable);
     
     alarmStaGpioInit();
-//    HAL_IWDG_Refresh(&hiwdg);
     Alarm_Init(&alarm_A, GPIO_A, GPIO_PIN_1, alarmA_type, alarmA_enable);
     Alarm_Init(&alarm_B, GPIO_A, GPIO_PIN_0, alarmB_type, alarmB_enable);
 
@@ -166,9 +165,14 @@ int main(void)
                 uint8_t  t = uart1.rxTail;
                 sUartMsg m = uart1.rxMsg[t];     /* 拷出快照, 缩短与ISR的共享窗口 */
                 uart1.rxTail = (uint8_t)((t + 1U) % UART_RX_MSG_NUM);
-                (void)parse_uart_data(&m, &peMsg);  /* 校验+执行 */
+                (void)parse_uart_data(&m,m.len, &peMsg);  /* 校验+执行 */
+//                printf("[RX] t=%u len=%u %02X %02X %02X %02X %02X %02X \r\n",
+//                       (unsigned)HAL_GetTick(), (unsigned)m.len,
+//                       (unsigned)m.data[0], (unsigned)m.data[1], (unsigned)m.data[2],
+//                       (unsigned)m.data[3], (unsigned)m.data[4], (unsigned)m.data[5]);
               }
         }
+        
         HAL_Delay(100);
       
     /* USER CODE BEGIN 3 */

@@ -21,9 +21,12 @@ AlarmDev_t alarm_B;
 /**
   * @brief  初始化一路报警输入
   * @note   以调用时刻的引脚电平作为初始稳定电平
-  * @param  dev:  报警设备控制块指针
-  * @param  port: GPIO 端口，如 GPIOA
-  * @param  pin:  GPIO 引脚，如 GPIO_PIN_0
+  * @param  dev:            报警设备控制块指针
+  * @param  port:           GPIO 端口，如 GPIOA
+  * @param  pin:            GPIO 引脚，如 GPIO_PIN_0
+  * @param  defaultLevel:   上电默认电平-非报警状态电平
+  * @param  enable:         是否使能报警
+
   * @retval None
   */
 void Alarm_Init(AlarmDev_t *dev, eGpioPort port, eGpioPin pin, uint8_t defaultLevel, uint8_t enable)

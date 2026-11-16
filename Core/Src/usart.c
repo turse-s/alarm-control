@@ -19,6 +19,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "SEGGER_RTT.h"
 #include "parser.h"
 
 UART_HandleTypeDef huart1;
@@ -27,6 +28,34 @@ DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN 0 */
+
+#pragma import(__use_no_semihosting)
+
+struct __FILE
+{
+    int handle;
+};
+FILE __stdout;
+
+void _sys_exit(int x)
+{
+    x = x;
+}
+
+void _ttywrch(int ch)
+{
+    ch = ch;
+}
+
+/* redefine fputc */
+int fputc(int ch, FILE *f)
+{
+/*---------------------- add your device support code ------------------------*/
+
+/*---------------------------------- end add ---------------------------------*/
+    SEGGER_RTT_PutChar(0, ch);
+    return ch;
+}
 
 /* USER CODE END 0 */
 
@@ -91,27 +120,42 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
-    if (huart->Instance == USART1) {
-        uint16_t frames = Size / UART_RX_MSG_SIZE;
 
-        for (uint16_t f = 0; f < frames; f++) {
-            uint8_t next = (uint8_t)((uart1.rxHead + 1U) % UART_RX_MSG_NUM);
-            if (next == uart1.rxTail) {               /* 队列满: 丢新保旧 */
-                uart1.rxOvf++;
+    if (huart->Instance == USART1) {
+        uint16_t pos = 0;
+        while (pos < Size) {
+            uint16_t remain = Size - pos;
+            uint16_t flen;
+            uint8_t  h = uart1.ringBuf[pos];
+
+            if (h == ALARM_HEADER || h == 0x99) {          /* 0xFA: 老 6 字节族 */
+                flen = 6;
+            }
+            else if (h == 0xFF) {            /* ★7 字节族帧头, 待你确认(见下) */
+                flen = 7;
+            } 
+            else {                            /* 垃圾字节: 丢 1 字节重新对齐 */
+                uart1.rxErr++;
+                pos++;
                 continue;
             }
-            memcpy(uart1.rxMsg[uart1.rxHead].data,
-                 &uart1.ringBuf[f * UART_RX_MSG_SIZE],
-                 UART_RX_MSG_SIZE);
-            uart1.rxMsg[uart1.rxHead].len = UART_RX_MSG_SIZE;
-            uart1.rxHead = next;                 /* ★最后发布写指针 */
+            if (remain < flen) {              /* 半帧尾巴: 丢弃计数 */
+                uart1.rxErr++;
+                break;
+            }
+            uint8_t next = (uint8_t)((uart1.rxHead + 1U) % UART_RX_MSG_NUM);
+            if (next == uart1.rxTail) {       /* 队列满: 丢新保旧 */
+                uart1.rxOvf++;
+                pos += flen;
+                continue;
+            }
+            memcpy(uart1.rxMsg[uart1.rxHead].data, &uart1.ringBuf[pos], flen);
+            uart1.rxMsg[uart1.rxHead].len = (uint8_t)flen;   /* ★记真实长度 */
+            uart1.rxHead = next;
+            pos += flen;
         }
 
-        if ((Size % UART_RX_MSG_SIZE) != 0U) {
-          uart1.rxErr++;                       /* 半帧/噪声尾巴, 丢弃并计数 */
-        }
-
-        uart1.frameReady = 1;
+        if (Size > 0U) uart1.frameReady = 1;
 
         /* 重启DMA接收, 并关闭半传输中断(避免每个事件触发两次回调) */
         HAL_UARTEx_ReceiveToIdle_DMA(huart, uart1.ringBuf, UART_RX_BUF_SIZE);

@@ -26,15 +26,17 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
-#define UART_RX_BUF_SIZE        54
-#define UART_RX_MSG_SIZE        6
+#include <stdio.h>
+#define UART_RX_BUF_SIZE        126
+#define UART_RX_MSG_SIZE        8
 #define UART_RX_MSG_NUM         8
 #define UART_TX_BUF_SIZE        8
 
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
+
+typedef struct __FILE FILE;
 
 typedef struct {
     uint8_t data[UART_RX_MSG_SIZE];

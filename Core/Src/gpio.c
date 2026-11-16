@@ -23,7 +23,7 @@
 
 sGpio ENA;
 sGpio ENB;
-
+sGpio Reset;
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
@@ -65,6 +65,15 @@ int alarmStaGpioInit(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     
+     /* Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
+    /* Configure GPIO pins : */
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    
     /* Configure GPIO pin Output Level */
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
     /* Configure GPIO pins : */
@@ -82,6 +91,10 @@ int alarmStaGpioInit(void)
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    
+    Reset.port = GPIO_A;
+    Reset.pin = GPIO_PIN_4;
+    Reset.sta = GPIO_HIGH;
     
     ENA.port = GPIO_A;
     ENA.pin = GPIO_PIN_5;
